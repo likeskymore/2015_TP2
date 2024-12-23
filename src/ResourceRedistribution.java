@@ -1,7 +1,10 @@
 package src;
 
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import MinHeap.HeapPriorityQueue;
 
@@ -20,40 +23,44 @@ public class ResourceRedistribution {
     /**
      * Distribute surplus resources to warehouses in need.
      */
-    public void distributeResources(List<Warehouse> warehouses) {
+    public List<Map<String, Object>> distributeResources(List<Warehouse> warehouses) {
+        List<Map<String, Object>> transfers = new ArrayList<>();  // Store transfer records
 
         if (warehouses == null || warehouses.isEmpty()) {
-            System.out.println("No warehouses to process.");
-            return;
+            return transfers;  // Return empty list if no warehouses
         }
+
+        // Populate the heaps based on warehouse capacity
         for (Warehouse warehouse : warehouses) {
             if (warehouse.getCapacity() > 50) {
-                // Insert into surplusHeap with max-heap behavior
                 surplusHeap.insert(warehouse.getCapacity(), warehouse);
             } else if (warehouse.getCapacity() < 50) {
-                // Insert into needHeap with min-heap behavior
                 needHeap.insert(warehouse.getCapacity(), warehouse);
             }
         }
 
+        // Perform resource redistribution
         while (!surplusHeap.isEmpty() && !needHeap.isEmpty()) {
-            // Get the warehouse with the highest surplus
+            // Get warehouse with the highest surplus and the most urgent need
             Warehouse surplusWarehouse = surplusHeap.removeMin().getValue();
-            // Get the warehouse with the most urgent need
             Warehouse needWarehouse = needHeap.removeMin().getValue();
 
-            int surplus = surplusWarehouse.getCapacity() - 50; // Surplus over the threshold
-            int need = 50 - needWarehouse.getCapacity(); // Needed to reach the threshold
+            int surplus = surplusWarehouse.getCapacity() - 50;  // Surplus over the threshold
+            int need = 50 - needWarehouse.getCapacity();  // Needed to reach the threshold
 
             // Allocate resources
             int transferAmount = Math.min(surplus, need);
             surplusWarehouse.setCapacity(surplusWarehouse.getCapacity() - transferAmount);
             needWarehouse.setCapacity(needWarehouse.getCapacity() + transferAmount);
 
-            System.out.println("Transferred " + transferAmount + " units from Warehouse " +
-                    surplusWarehouse.getId() + " to Warehouse " + needWarehouse.getId());
+            // Prepare transfer record
+            Map<String, Object> transferRecord = new HashMap<>();
+            transferRecord.put("From", "Warehouse " + surplusWarehouse.getId());
+            transferRecord.put("To", "Warehouse " + needWarehouse.getId());
+            transferRecord.put("Units", transferAmount);
+            transfers.add(transferRecord);  // Add transfer record to the list
 
-            // Reinsert updated warehouses into appropriate heaps
+            // Reinsert updated warehouses into the heaps if needed
             if (surplusWarehouse.getCapacity() > 50) {
                 surplusHeap.insert(surplusWarehouse.getCapacity(), surplusWarehouse);
             }
@@ -61,11 +68,6 @@ public class ResourceRedistribution {
                 needHeap.insert(needWarehouse.getCapacity(), needWarehouse);
             }
         }
-
-        System.out.println("Final Resource Levels:");
-        for (Warehouse warehouse : warehouses) {
-            System.out.println("Warehouse " + warehouse.getId() + ": " + warehouse.getCapacity() + " units");
-        }
-
+        return transfers;  // Return the list of transfer records
     }
 }

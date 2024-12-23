@@ -22,16 +22,16 @@ public class NetworkApp {
         List<Warehouse> warehouses = dataLoader.getWarehouses();
 
         EmergencySupplyNetwork supplySystem = new EmergencySupplyNetwork();
-        supplySystem.costGraphBuilder(cities, warehouses);
-        Map<City, List<Warehouse>> allocationLog = supplySystem.allocateResources(cities, warehouses);
+        Map<City, Map<Warehouse, Double>> costMatrix = supplySystem.costGraphBuilder(cities, warehouses);
+        Map<City, Map<Warehouse, Integer>> allocationLog = supplySystem.allocateResources(cities, warehouses);
+        Map<Warehouse, Integer> remainingStock = supplySystem.getRemainingStock();
 
         ResourceRedistribution resourceRedistribution = new ResourceRedistribution();
-        resourceRedistribution.distributeResources(warehouses);
+        List<Map<String, Object>> transferList = resourceRedistribution.distributeResources(warehouses);
 
         DynamicResourceSharing citiesClusters = new DynamicResourceSharing(cities);
-        citiesClusters.displayClusters();
-        citiesClusters.citiesUnion(allocationLog);
-        citiesClusters.queryCities();
+        Map<Integer, List<City>> clusterMap = citiesClusters.citiesUnion(allocationLog);
+        List<Map<String, Object>> queryList = citiesClusters.queryCities();  // Get queries from the cities' clusters
 
         // Créer une map pour stocker le résultat JSON
         Map<String, Object> jsonOutput = new HashMap<>();
@@ -39,119 +39,91 @@ public class NetworkApp {
         // Task 1 and 2
         Map<String, Object> task1and2 = new HashMap<>();
         
-        // Cost Matrix
-        Map<String, Object> costMatrix = new HashMap<>();
+        // Cost Matrix - Use data dynamically from costMatrix
+        Map<String, Object> graphRepresentation = new HashMap<>();
         List<Map<String, Object>> costMatrixList = new ArrayList<>();
-        // Remplir le costMatrixList avec vos données calculées pour les villes et entrepôts (exemple)
         for (City city : cities) {
-            Map<String, Object> cityCost = new HashMap<>();
-            cityCost.put("City", "City " + city.getId());  // Assurez-vous que la méthode getId() retourne l'identifiant
+            Map<String, Object> cityCost = new LinkedHashMap<>();
+            cityCost.put("City", "City " + city.getId());
+            Map<Warehouse, Double> warehouseCosts = costMatrix.get(city);
             for (Warehouse warehouse : warehouses) {
-                cityCost.put("Warehouse " + warehouse.getId(), Math.random() * 100);  // Remplacez par le calcul réel
+                cityCost.put("Warehouse " + warehouse.getId(), warehouseCosts.get(warehouse));
             }
             costMatrixList.add(cityCost);
         }
-        costMatrix.put("Cost Matrix", costMatrixList);
-        task1and2.put("Graph Representation", costMatrix);
+        graphRepresentation.put("Cost Matrix", costMatrixList);
+        task1and2.put("Graph Representation", graphRepresentation);
         
-        // Resource Allocation
+        // Resource Allocation - Use data dynamically from allocationLog
         List<Map<String, Object>> allocationList = new ArrayList<>();
         for (City city : cities) {
             Map<String, Object> allocation = new HashMap<>();
-            allocation.put("City", "City " + city.getId());  
-            allocation.put("Priority", "High");  
-            allocation.put("Allocated", 50);  
-            allocation.put("Warehouse", "Warehouse 101");  
+            allocation.put("City", "City " + city.getId());
+            allocation.put("Priority", city.getPriority());
+            allocation.put("Allocated", allocationLog.get(city).values().stream().mapToInt(Integer::intValue).sum()); // Dynamic allocation
+            allocation.put("Warehouse", allocationLog.get(city).keySet().stream().map(warehouse -> "Warehouse " + warehouse.getId()).findFirst().orElse("N/A"));
             allocationList.add(allocation);
         }
         task1and2.put("Resource Allocation", allocationList);
 
-        // Remaining Capacities
+        // Ajouter remaining resources
         Map<String, Object> remainingCapacities = new HashMap<>();
-        remainingCapacities.put("Warehouse 101", 0);
-        remainingCapacities.put("Warehouse 102", 20);
-        remainingCapacities.put("Warehouse 103", 110);
+        for (Warehouse warehouse : warehouses) {
+            // Fetch remaining stock for each warehouse from the remainingStock map
+            remainingCapacities.put("Warehouse " + warehouse.getId(), remainingStock.get(warehouse));
+        }
         task1and2.put("Remaining Capacities", remainingCapacities);
 
         // Ajouter Task 1 and 2 au JSON final
         jsonOutput.put("Task 1 and 2", task1and2);
 
-        // Task 3
+        // Task 3: Resource Redistribution
         Map<String, Object> task3 = new HashMap<>();
         Map<String, Object> resourceRedistributio = new HashMap<>();
         
-        // Transfers
-        List<Map<String, Object>> transfersList = new ArrayList<>();
-        Map<String, Object> transfer1 = new HashMap<>();
-        transfer1.put("From", "Warehouse Z");
-        transfer1.put("To", "Warehouse X");
-        transfer1.put("Units", 50);
-        transfersList.add(transfer1);
-
-        Map<String, Object> transfer2 = new HashMap<>();
-        transfer2.put("From", "Warehouse Z");
-        transfer2.put("To", "Warehouse Y");
-        transfer2.put("Units", 10);
-        transfersList.add(transfer2);
-
-        resourceRedistributio.put("Transfers", transfersList);
+        // Transfers from Resource Redistribution (populate from transferList)
+        resourceRedistributio.put("Transfers", transferList);
         
-        // Final Resource Levels
+        // Final Resource Levels (Assuming you want the final values for warehouses after redistribution)
         Map<String, Object> finalResourceLevels = new HashMap<>();
-        finalResourceLevels.put("Warehouse 101", 50);
-        finalResourceLevels.put("Warehouse 102", 30);
-        finalResourceLevels.put("Warehouse 103", 50);
+        for (Warehouse warehouse : warehouses) {
+            finalResourceLevels.put("Warehouse " + warehouse.getId(), warehouse.getCapacity());
+        }
         resourceRedistributio.put("Final Resource Levels", finalResourceLevels);
 
         task3.put("Resource Redistribution", resourceRedistributio);
         jsonOutput.put("Task 3", task3);
 
-        // Task 4
+        // Task 4: Dynamic Resource Sharing
         Map<String, Object> task4 = new HashMap<>();
         Map<String, Object> dynamicResourceSharing = new HashMap<>();
         
-        // Initial Clusters
+        // Initial Clusters - Dynamically created from clusterMap
         Map<String, String> initialClusters = new HashMap<>();
-        initialClusters.put("City A", "Cluster 1");
-        initialClusters.put("City B", "Cluster 2");
-        initialClusters.put("City C", "Cluster 3");
+        for (Map.Entry<Integer, List<City>> entry : clusterMap.entrySet()) {
+            for (City city : entry.getValue()) {
+                initialClusters.put("City " + city.getId(), "Cluster " + entry.getKey());
+            }
+        }
         dynamicResourceSharing.put("Initial Clusters", initialClusters);
 
-        // Merging Steps
+        // Merging Steps - Use the citiesClusters merging steps dynamically
         List<Map<String, Object>> mergingSteps = new ArrayList<>();
-        Map<String, Object> mergeStep = new HashMap<>();
-        mergeStep.put("Action", "Merge");
-        mergeStep.put("Cities", Arrays.asList("City A", "City B"));
-        mergeStep.put("Cluster After Merge", "Cluster 1");
-        mergingSteps.add(mergeStep);
-
+        List<Map<String, Object>> mergeSteps = citiesClusters.getMergingSteps();
+        mergingSteps.addAll(mergeSteps);
         dynamicResourceSharing.put("Merging Steps", mergingSteps);
-
-        // Cluster Membership After Merging
+        
+        // Cluster Membership After Merging - Dynamically generated using clusterMap
         Map<String, String> clusterMembership = new HashMap<>();
-        clusterMembership.put("City A", "Cluster 1");
-        clusterMembership.put("City B", "Cluster 1");
-        clusterMembership.put("City C", "Cluster 3");
+        for (Map.Entry<Integer, List<City>> entry : clusterMap.entrySet()) {
+            for (City city : entry.getValue()) {
+                clusterMembership.put("City " + city.getId(), "Cluster " + entry.getKey());
+            }
+        }
         dynamicResourceSharing.put("Cluster Membership After Merging", clusterMembership);
 
-        // Queries
-        List<Map<String, Object>> queries = new ArrayList<>();
-        Map<String, Object> query1 = new HashMap<>();
-        query1.put("Query", "Are City A and City C in the same cluster?");
-        query1.put("Result", "No");
-        queries.add(query1);
-
-        Map<String, Object> query2 = new HashMap<>();
-        query2.put("Query", "Are City A and City B in the same cluster?");
-        query2.put("Result", "Yes");
-        queries.add(query2);
-
-        Map<String, Object> query3 = new HashMap<>();
-        query3.put("Query", "Are City B and City C in the same cluster?");
-        query3.put("Result", "No");
-        queries.add(query3);
-
-        dynamicResourceSharing.put("Queries", queries);
+        // Queries from DynamicResourceSharing - Using dynamically generated query list
+        dynamicResourceSharing.put("Queries", queryList);
 
         task4.put("Dynamic Resource Sharing", dynamicResourceSharing);
         jsonOutput.put("Task 4", task4);

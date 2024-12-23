@@ -6,9 +6,12 @@ import Graph.*;
 
 public class EmergencySupplyNetwork {
     private AdjacencyMapGraph<Location, Integer> costGraph = new AdjacencyMapGraph<>(false);
+    private Map<Warehouse, Integer> remainingStock = new HashMap<>();
 
     // Method to calculate the cost (Euclidean distance) between cities and warehouses
-    public void costGraphBuilder(List<City> cities, List<Warehouse> warehouses) {
+    public Map<City, Map<Warehouse, Double>> costGraphBuilder(List<City> cities, List<Warehouse> warehouses) {
+        Map<City, Map<Warehouse, Double>> costMatrix = new HashMap<>();
+
         // Insert vertices for cities into the graph
         for (City city : cities) {
             Vertex<Location> cityVertex = new LocationVertex(city);  // Wrap the city in LocationVertex
@@ -20,22 +23,9 @@ public class EmergencySupplyNetwork {
             Vertex<Location> warehouseVertex = new LocationVertex(warehouse);  // Wrap the warehouse in LocationVertex
             costGraph.insertVertex(warehouseVertex.getElement());  // Insert the warehouse vertex into the graph
         }
-
-        // Print the header for the cost matrix
-        System.out.println("Graph Representation (Cost Matrix):");
-        System.out.println("----------------------------------------------------------------");
-
-        // Print the first row (cities label) and align the warehouses properly
-        System.out.print(String.format("%-10s", "cities |"));  // Formatting for 'cities' label
-        for (Warehouse warehouse : warehouses) {
-            System.out.print(String.format("%-15s", "Warehouse " + warehouse.getId())+" | ");  // Align warehouse columns
-        }
-        System.out.println();
-        System.out.println("----------------------------------------------------------------");
-
-        // Now, calculate and print the cost matrix
+        // Now, calculate the cost matrix
         for (City city : cities) {
-            System.out.print(String.format("%-10s", "City " + city.getId() + " |"));  // Formatting for city label
+            Map<Warehouse, Double> warehouseCostMap = new HashMap<>();
             for (Warehouse warehouse : warehouses) {
                 // Find the vertex for the city and warehouse
                 Vertex<Location> cityVertex = findVertex(city);
@@ -47,67 +37,61 @@ public class EmergencySupplyNetwork {
                 // Add edge between the city and warehouse with the calculated cost
                 costGraph.insertEdge(cityVertex, warehouseVertex, (int) cost);  // Cast to int if needed
 
-                // Print the cost for the specific city and warehouse with two decimal places, ensuring alignment
-                System.out.print(String.format("%-15.2f", cost)+" | ");  // Formatting for costs
+                // Store the cost for this city-warehouse pair
+                warehouseCostMap.put(warehouse, cost);
             }
-            System.out.println();
+            costMatrix.put(city, warehouseCostMap);
         }
-        System.out.println("----------------------------------------------------------------");
+        return costMatrix;
     }
 
-    public Map<City,List<Warehouse>> allocateResources(List<City> cities, List<Warehouse> warehouses) {
-                // Priority queue for cities based on priority (High -> 1, Medium -> 2, Low -> 3)
+    public Map<City, Map<Warehouse, Integer>> allocateResources(List<City> cities, List<Warehouse> warehouses) {
+        // Priority queue for cities based on priority (High -> 1, Medium -> 2, Low -> 3)
         SortedPriorityQueue<Integer, City> cityQueue = new SortedPriorityQueue<>();
-        Map<City, List<Warehouse>> allocationLog = new HashMap<>();
+        Map<City, Map<Warehouse, Integer>> allocationLog = new HashMap<>();
+        
+        // Initialize the remaining stock map with the warehouse capacities (assuming initial stock is same as capacity)
+        for (Warehouse warehouse : warehouses) {
+            remainingStock.put(warehouse, warehouse.getCapacity());  // Assuming initial stock = capacity
+        }
 
         // Insert cities into the priority queue, with priority as the key
         for (City city : cities) {
-            int priorityValue = priorityToInteger(city.getPriority());  // Map priority to integer value
+            int priorityValue = priorityToInteger(city.getPriority()); // Map priority to integer value
             cityQueue.insert(priorityValue, city);
         }
 
         // Process cities in priority order (Low priority city will be processed last)
-        System.out.println("Allocating resources:");
         while (!cityQueue.isEmpty()) {
             City city = cityQueue.removeMin().getValue();
-            System.out.println("Allocating resources for City " + city.getId() + " (Priority: " + city.getPriority() + ")");
 
-            List<Warehouse> allocatedWarehouses = new ArrayList<>();
+            Map<Warehouse, Integer> allocatedWarehouses = new HashMap<>();
             boolean fulfilled = false;
 
             for (Warehouse warehouse : findWarehousesInCostOrder(city, warehouses)) {
-                if (warehouse.getCapacity() > 0) {
-                    int allocatedUnits = Math.min(warehouse.getCapacity(), city.getDemand());
-                    warehouse.setCapacity(warehouse.getCapacity() - allocatedUnits);
-                    city.setDemand(city.getDemand() - allocatedUnits);
+                int availableStock = remainingStock.get(warehouse);  // Get the remaining stock for the warehouse
+                if (availableStock > 0) {  // Check if warehouse has remaining stock
+                    int allocatedUnits = Math.min(availableStock, city.getDemand());  // Allocate units based on available stock
+                    remainingStock.put(warehouse, availableStock - allocatedUnits);  // Decrease stock after allocation
+                    city.setDemand(city.getDemand() - allocatedUnits);  // Update city demand
 
-                    // Add the warehouse to the allocation log
-                    if (!allocatedWarehouses.contains(warehouse)) {
-                        allocatedWarehouses.add(warehouse);
-                    }
-                    System.out.println("Allocated " + allocatedUnits + " units from Warehouse " + warehouse.getId());
-
+                    // Update allocation log with the allocated units
+                    allocatedWarehouses.put(warehouse, allocatedWarehouses.getOrDefault(warehouse, 0) + allocatedUnits);
+                    
                     if (city.getDemand() == 0) {
                         fulfilled = true;
                         break;
                     }
                 }
             }
-
-            if (!fulfilled) {
-                System.out.println("Unable to fully fulfill demand for City " + city.getId());
-            }
-
             allocationLog.put(city, allocatedWarehouses);
         }
-
-        // Print remaining warehouse capacities
-        System.out.println("Remaining Warehouse Capacities:");
-        for (Warehouse warehouse : warehouses) {
-            System.out.println("Warehouse " + warehouse.getId() + ": " + warehouse.getCapacity());
-        }
-
         return allocationLog;
+    }
+
+    // Method to get the remaining stock (read-only access)
+    public Map<Warehouse, Integer> getRemainingStock() {
+        return new HashMap<>(remainingStock);  // Return a copy to avoid external modifications
     }
 
     // Convert the priority string to an integer value

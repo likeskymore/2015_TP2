@@ -3,24 +3,24 @@
     "Resource Allocation": [
       {
         "Warehouse": "Warehouse 101",
-        "Priority": "High",
+        "Priority": "Medium",
         "City": "City 1",
-        "Allocated": 50
+        "Allocated": 70
       },
       {
         "Warehouse": "Warehouse 101",
         "Priority": "High",
         "City": "City 2",
-        "Allocated": 50
+        "Allocated": 30
       },
       {
-        "Warehouse": "Warehouse 101",
-        "Priority": "High",
+        "Warehouse": "Warehouse 102",
+        "Priority": "Low",
         "City": "City 3",
-        "Allocated": 50
+        "Allocated": 20
       },
       {
-        "Warehouse": "Warehouse 101",
+        "Warehouse": "Warehouse 103",
         "Priority": "High",
         "City": "City 4",
         "Allocated": 50
@@ -28,34 +28,34 @@
     ],
     "Remaining Capacities": {
       "Warehouse 101": 0,
-      "Warehouse 102": 20,
-      "Warehouse 103": 110
+      "Warehouse 102": 30,
+      "Warehouse 103": 100
     },
     "Graph Representation": {
       "Cost Matrix": [
         {
-          "Warehouse 101": 81.21190153438444,
-          "Warehouse 102": 43.06721058870131,
           "City": "City 1",
-          "Warehouse 103": 85.21099195895864
+          "Warehouse 101": 3.61,
+          "Warehouse 102": 9.22,
+          "Warehouse 103": 36.06
         },
         {
-          "Warehouse 101": 57.61618614971448,
-          "Warehouse 102": 46.60887307157867,
           "City": "City 2",
-          "Warehouse 103": 14.771694495276734
+          "Warehouse 101": 5.0,
+          "Warehouse 102": 7.81,
+          "Warehouse 103": 32.32
         },
         {
-          "Warehouse 101": 74.35295219703525,
-          "Warehouse 102": 16.368557142001027,
           "City": "City 3",
-          "Warehouse 103": 55.02804632992058
+          "Warehouse 101": 24.08,
+          "Warehouse 102": 1.0,
+          "Warehouse 103": 20.1
         },
         {
-          "Warehouse 101": 44.93341427148862,
-          "Warehouse 102": 96.59129075907308,
           "City": "City 4",
-          "Warehouse 103": 39.6720389764623
+          "Warehouse 101": 39.4,
+          "Warehouse 102": 9.06,
+          "Warehouse 103": 1.41
         }
       ]
     }
@@ -64,59 +64,62 @@
     "Dynamic Resource Sharing": {
       "Queries": [
         {
-          "Query": "Are City A and City C in the same cluster?",
-          "Result": "No"
-        },
-        {
-          "Query": "Are City A and City B in the same cluster?",
+          "Query": "Are City 1 and City 2 in the same cluster?",
           "Result": "Yes"
         },
         {
-          "Query": "Are City B and City C in the same cluster?",
+          "Query": "Are City 1 and City 3 in the same cluster?",
+          "Result": "No"
+        },
+        {
+          "Query": "Are City 1 and City 4 in the same cluster?",
+          "Result": "No"
+        },
+        {
+          "Query": "Are City 2 and City 3 in the same cluster?",
+          "Result": "No"
+        },
+        {
+          "Query": "Are City 2 and City 4 in the same cluster?",
+          "Result": "No"
+        },
+        {
+          "Query": "Are City 3 and City 4 in the same cluster?",
           "Result": "No"
         }
       ],
       "Initial Clusters": {
-        "City C": "Cluster 3",
-        "City A": "Cluster 1",
-        "City B": "Cluster 2"
+        "City 3": "Cluster 3",
+        "City 4": "Cluster 4",
+        "City 1": "Cluster 1",
+        "City 2": "Cluster 1"
       },
       "Merging Steps": [
         {
           "Action": "Merge",
           "Cities": [
-            "City A",
-            "City B"
+            "City 1",
+            "City 2"
           ],
           "Cluster After Merge": "Cluster 1"
         }
       ],
       "Cluster Membership After Merging": {
-        "City C": "Cluster 3",
-        "City A": "Cluster 1",
-        "City B": "Cluster 1"
+        "City 3": "Cluster 3",
+        "City 4": "Cluster 4",
+        "City 1": "Cluster 1",
+        "City 2": "Cluster 1"
       }
     }
   },
   "Task 3": {
     "Resource Redistribution": {
       "Final Resource Levels": {
-        "Warehouse 101": 50,
-        "Warehouse 102": 30,
-        "Warehouse 103": 50
+        "Warehouse 101": 100,
+        "Warehouse 102": 50,
+        "Warehouse 103": 150
       },
-      "Transfers": [
-        {
-          "From": "Warehouse Z",
-          "To": "Warehouse X",
-          "Units": 50
-        },
-        {
-          "From": "Warehouse Z",
-          "To": "Warehouse Y",
-          "Units": 10
-        }
-      ]
+      "Transfers": []
     }
   }
 }
