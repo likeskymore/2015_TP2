@@ -1,3 +1,6 @@
+// Auteurs : Mamour NDIAYE 20257780
+//           Trung NGUYEN 20238006
+
 package src;
 
 import com.google.gson.Gson;
